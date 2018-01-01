@@ -184,7 +184,8 @@ setCursor:
 
 
 		
-		mov boxTop[eax], 0F8h ;改空心點
+		mov boxTop[eax], 0F8h   ;改空心點, 少了判斷勝利的函式
+								;以及少了判斷線在該誰落子的條件
 		
 		pop ecx
 		pop edx
