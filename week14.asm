@@ -176,7 +176,6 @@ setCursor:
 		mov bx, consoleInfo.dwCursorPosition.y
 		sub ax, xyPosition.x
 		sub bx, xyPosition.y
-		dec bx
 		
 		mov Temp, ax
 		mov ax, BoxWidth
@@ -185,7 +184,7 @@ setCursor:
 
 
 		
-		mov boxBody1[eax], 0F8h ;改空心點
+		mov boxTop[eax], 0F8h ;改空心點
 		
 		pop ecx
 		pop edx
