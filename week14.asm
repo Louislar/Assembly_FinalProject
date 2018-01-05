@@ -1,4 +1,7 @@
 INCLUDE Irvine32.inc
+
+judge PROTO, pstart: PTR BYTE, twidth: word, theight: word, curPos: DWORD, curType: BYTE
+
 main	EQU start@0
 BoxWidth = 15
 BoxHeight = 9
@@ -31,6 +34,9 @@ attributes2 WORD BoxWidth DUP(0Ah)
 CursorPos COORD <>					;游標目前位置
 consoleInfo CONSOLE_SCREEN_BUFFER_INFO <>	;從GetConsoleScreenBufferInfo拿回來的值
 nextStep BYTE "NEXT STEP, PRESS ESC TO QUIT PROGRAM", 0
+
+;;;;;;;;;;;;;;;;;;;win;;;;;;;;;;;;;;;;;;;;;;;;
+pathLength word 0
 
           
  
@@ -186,11 +192,17 @@ setCursor:
 		
 		mov boxTop[eax], 0F8h   ;改空心點, 少了判斷勝利的函式
 								;以及少了判斷線在該誰落子的條件
+		;;;;;;;;;勝負判斷;;;;;;;;;;
+		INVOKE judge, ADDR boxTop, BoxWidth, BoxHeight, eax, 0F8h
+		.IF ebx==1
+			mov nextStep[ebx], 0F8h
+		.ENDIF
 		
 		pop ecx
 		pop edx
 		pop ebx
 		pop eax
+		
 		jmp START
 	.ENDIF
 	jmp setCursor
@@ -201,5 +213,301 @@ END_FUNC:
     call Clrscr ;清除銀幕
     exit
 main ENDP
+
+
+
+judge PROC USES eax ecx, pstart:PTR BYTE, twidth: word, theight: word, curPos: DWORD, curType: BYTE
+	
+	;;test;;
+	push eax
+	mov eax, 12h
+	mov al, BYTE PTR [pstart]
+	pop eax
+	;;test-end;;
+	
+	push curPos
+	mov ecx, 4 ;五子連線才獲勝
+	mov eax, 0 ;紀錄幾子連線
+upleft:
+	DEC curPos
+	push eax
+	movzx eax, twidth
+	SUB curPos, eax
+	pop eax
+	
+	push ecx
+	push ebx
+	mov ecx, curPos
+	mov ebx ,0
+	mov bl, boxTop[ecx]
+	.IF bl==curType ;ecx=curPos
+		INC eax
+	.ENDIF
+	
+	.IF bl!=curType
+		pop ebx
+		pop ecx
+		jmp upleftbreak
+	.ENDIF
+	pop ebx
+	pop ecx
+	loop upleft
+upleftbreak:
+	pop curPos
+	.IF eax==4
+		jmp win
+	.ENDIF
+	
+	
+	
+	push curPos
+	mov ecx, 4 ;五子連線才獲勝
+downright:
+	INC curPos
+	push eax
+	movzx eax, twidth
+	ADD curPos, eax
+	pop eax
+	
+	push ecx
+	push ebx
+	mov ecx, curPos
+	mov ebx ,0
+	mov bl, boxTop[ecx]
+	.IF bl==curType ;ecx=curPos
+		INC eax
+	.ENDIF
+	
+	.IF bl!=curType
+		pop ebx
+		pop ecx
+		jmp downrightbreak
+	.ENDIF
+	pop ebx
+	pop ecx
+	
+	loop downright
+downrightbreak:
+	pop curPos
+	.IF eax==4
+		jmp win
+	.ENDIF
+	;第一組左上-右下-情況結束
+	
+	
+	;;;;;;;;;;;;;;;;;;第二組上-下-情況;;;;;;;;;;;;;;;;;;;;;;
+	push curPos
+	mov ecx, 4 ;五子連線才獲勝
+	mov eax, 0 ;紀錄幾子連線, eax歸零
+up:
+	push eax
+	movzx eax, twidth
+	SUB curPos, eax
+	pop eax
+	
+	push ecx
+	push ebx
+	mov ecx, curPos
+	mov ebx ,0
+	mov bl, boxTop[ecx]
+	.IF bl==curType ;ecx=curPos
+		INC eax
+	.ENDIF
+	
+	.IF bl!=curType
+		pop ebx
+		pop ecx
+		jmp upbreak
+	.ENDIF
+	pop ebx
+	pop ecx
+	
+	loop up
+upbreak:
+	pop curPos
+	.IF eax==4
+		jmp win
+	.ENDIF
+	
+	
+	
+	push curPos
+	mov ecx, 4 ;五子連線才獲勝
+down:
+	push eax
+	movzx eax, twidth
+	ADD curPos, eax
+	pop eax
+	
+	push ecx
+	push ebx
+	mov ecx, curPos
+	mov ebx ,0
+	mov bl, boxTop[ecx]
+	.IF bl==curType ;ecx=curPos
+		INC eax
+	.ENDIF
+	
+	.IF bl!=curType
+		pop ebx
+		pop ecx
+		jmp downbreak
+	.ENDIF
+	pop ebx
+	pop ecx
+	
+	loop down
+downbreak:
+	pop curPos
+	.IF eax==4
+		jmp win
+	.ENDIF
+	;;;;;;;;;;;;;;;;;第二組上-下-情況結束;;;;;;;;;;;;;;
+	
+
+	;;;;;;;;;;;;;;;;;;第三組右上-左下-情況;;;;;;;;;;;;;;;;;;;;;;
+	push curPos
+	mov ecx, 4 ;五子連線才獲勝
+	mov eax, 0 ;紀錄幾子連線, eax歸零
+upright:
+	INC curPos
+	push eax
+	movzx eax, twidth
+	SUB curPos, eax
+	pop eax
+	
+	push ecx
+	push ebx
+	mov ecx, curPos
+	mov ebx ,0
+	mov bl, boxTop[ecx]
+	.IF bl==curType ;ecx=curPos
+		INC eax
+	.ENDIF
+	
+	.IF bl!=curType
+		pop ebx
+		pop ecx
+		jmp uprightbreak
+	.ENDIF
+	pop ebx
+	pop ecx
+	
+	loop upright
+uprightbreak:
+	pop curPos
+	.IF eax==4
+		jmp win
+	.ENDIF
+	
+	
+	
+	push curPos
+	mov ecx, 4 ;五子連線才獲勝
+downleft:
+	DEC curPos
+	push eax
+	movzx eax, twidth
+	ADD curPos, eax
+	pop eax
+	
+	push ecx
+	push ebx
+	mov ecx, curPos
+	mov ebx ,0
+	mov bl, boxTop[ecx]
+	.IF bl==curType ;ecx=curPos
+		INC eax
+	.ENDIF
+	
+	.IF bl!=curType
+		pop ebx
+		pop ecx
+		jmp downleftbreak
+	.ENDIF
+	pop ebx
+	pop ecx
+	
+	loop downleft
+downleftbreak:
+	pop curPos
+	.IF eax==4
+		jmp win
+	.ENDIF
+	;;;;;;;;;;;;;;;;;第三組上-下-情況結束;;;;;;;;;;;;;;
+	
+	
+	;;;;;;;;;;;;;;;;;;第四組左-右-情況;;;;;;;;;;;;;;;;;;;;;;
+	push curPos
+	mov ecx, 4 ;五子連線才獲勝
+	mov eax, 0 ;紀錄幾子連線, eax歸零
+left:
+	DEC curPos
+	
+	push ecx
+	push ebx
+	mov ecx, curPos
+	mov ebx ,0
+	mov bl, boxTop[ecx]
+	.IF bl==curType ;ecx=curPos
+		INC eax
+	.ENDIF
+	
+	.IF bl!=curType
+		pop ebx
+		pop ecx
+		jmp leftbreak
+	.ENDIF
+	pop ebx
+	pop ecx
+	
+	loop left
+leftbreak:
+	pop curPos
+	.IF eax==4
+		jmp win
+	.ENDIF
+	
+	
+	
+	push curPos
+	mov ecx, 4 ;五子連線才獲勝
+right:
+	INC curPos
+	
+	push ecx
+	push ebx
+	mov ecx, curPos
+	mov ebx ,0
+	mov bl, boxTop[ecx]
+	.IF bl==curType ;ecx=curPos
+		INC eax
+	.ENDIF
+	
+	.IF bl!=curType
+		pop ebx
+		pop ecx
+		jmp rightbreak
+	.ENDIF
+	pop ebx
+	pop ecx
+	
+	loop right
+rightbreak:
+	pop curPos
+	.IF eax==4
+		jmp win
+	.ENDIF
+	;;;;;;;;;;;;;;;;;第四組左-右-情況結束;;;;;;;;;;;;;;
+	
+	jmp nwin
+win:
+	mov ebx, 1
+	jmp FIN
+nwin:
+	mov ebx, 0
+FIN:
+	ret
+judge ENDP
 
 END main
