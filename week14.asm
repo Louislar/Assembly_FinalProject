@@ -42,6 +42,7 @@ curTypeHint BYTE "CURRENT TURN ?", 0
 BorW WORD 1							;黑子為1, 白子為0
 presentType BYTE WhiteDot
 presentPos DWORD ?
+winName BYTE "WINNER IS ?"
 
 
           
@@ -272,9 +273,23 @@ setCursor:
 		
 		.IF ebx==1				;;presentType的那個人贏了
 			push eax
+			push xyPosition.x
+			push xyPosition.y
 			mov al, presentType
 			mov nextStep[ebx], al
+			mov winName[10], al
+			mov xyPosition.x, 0
+			mov xyPosition.y, 2
+			INVOKE SetConsoleCursorPosition, outputHandle, xyPosition
+			mov edx, OFFSET winName
+			call WriteString
+			pop xyPosition.y
+			pop xyPosition.x
 			pop eax
+			call crlf
+			call WaitMsg
+			jmp END_FUNC
+			
 		.ENDIF
 		
 		
