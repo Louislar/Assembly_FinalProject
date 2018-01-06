@@ -5,17 +5,19 @@ judge PROTO, pstart: PTR BYTE, twidth: word, theight: word, curPos: DWORD, curTy
 main	EQU start@0
 BoxWidth = 15
 BoxHeight = 9
+blackDot = 0F9h
+WhiteDot = 06Fh
  
 .data
 boxTop    BYTE 0DAh, (BoxWidth - 2) DUP(0C2h), 0BFh
-boxBody1   BYTE 0C3h, 0F9h, 0F9h, 0F8h, (BoxWidth - 5) DUP(0C5h), 0B4h	;0F9h是實心點
-			BYTE 0C3h, 0F9h, 0F9h, 0F8h, (BoxWidth - 5) DUP(0C5h), 0B4h ;body有七列
-			BYTE 0C3h, 0F9h, 0F9h, 0F8h, (BoxWidth - 5) DUP(0C5h), 0B4h
-			BYTE 0C3h, 0F9h, 0F9h, 0F8h, (BoxWidth - 5) DUP(0C5h), 0B4h
-			BYTE 0C3h, 0F9h, 0F9h, 0F8h, (BoxWidth - 5) DUP(0C5h), 0B4h
-			BYTE 0C3h, 0F9h, 0F9h, 0F8h, (BoxWidth - 5) DUP(0C5h), 0B4h
-			BYTE 0C3h, 0F9h, 0F9h, 0F8h, (BoxWidth - 5) DUP(0C5h), 0B4h
-boxBottom BYTE 0C0h, (BoxWidth - 5) DUP(0C1h), 0F8h, 0F9h, 0F8h, 0D9h ;0F8h是空心點
+boxBody1   BYTE 0C3h, WhiteDot, WhiteDot, blackDot, (BoxWidth - 5) DUP(0C5h), 0B4h	;WhiteDot是實心點
+			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h ;body有七列
+			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h
+			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h
+			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h
+			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h
+			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h
+boxBottom BYTE 0C0h, (BoxWidth - 5) DUP(0C1h), blackDot, WhiteDot, blackDot, 0D9h ;blackDot是空心點
 
 Temp WORD 0
 ColNum WORD ?
@@ -34,9 +36,13 @@ attributes2 WORD BoxWidth DUP(0Ah)
 CursorPos COORD <>					;游標目前位置
 consoleInfo CONSOLE_SCREEN_BUFFER_INFO <>	;從GetConsoleScreenBufferInfo拿回來的值
 nextStep BYTE "NEXT STEP, PRESS ESC TO QUIT PROGRAM", 0
+curTypeHint BYTE "CURRENT TURN ?", 0
 
-;;;;;;;;;;;;;;;;;;;win;;;;;;;;;;;;;;;;;;;;;;;;
-pathLength word 0
+;;;;;;;;;;;;;;;;;;;turn;;;;;;;;;;;;;;;;;;;;;;;;
+BorW WORD 1							;黑子為1, 白子為0
+presentType BYTE WhiteDot
+presentPos DWORD ?
+
 
           
  
@@ -128,9 +134,18 @@ L1:
 	pop eax
 	
 	
-	;;銀幕上顯示next step
+	;;銀幕上顯示next step, 以及現在該誰下棋了
 	push edx
 	mov edx, OFFSET nextStep
+	call WriteString
+	call crlf
+	.IF BorW==1
+		mov curTypeHint[13], blackDot
+	.ENDIF
+	.IF BorW==0
+		mov curTypeHint[13], WhiteDot
+	.ENDIF
+	mov edx, OFFSET curTypeHint
 	call WriteString
 	pop edx
 	
@@ -138,9 +153,9 @@ L1:
 	
 	;;設定游標位置的方法
 	push eax
-	mov ax, 10
+	mov ax, xyPosition.x
 	mov CursorPos.x, ax
-	mov ax, 5
+	mov ax, xyPosition.y
 	mov CursorPos.y, ax
 	pop eax
 	
@@ -152,16 +167,46 @@ setCursor:
 	INVOKE SetConsoleCursorPosition, outputHandle, Cursorpos
 	call ReadChar
 	.IF ax == 4800h ;UP
+		push eax
+		mov ax, xyPosition.y
 		sub Cursorpos.y,1
+		.IF	Cursorpos.y<ax
+			ADD Cursorpos.y,1
+			jmp setCursor
+		.ENDIF
+		pop eax
 	.ENDIF
 	.IF ax == 5000h ;DOWN
+		push eax
+		mov ax, xyPosition.y
+		ADD ax, BoxHeight-1
 		add Cursorpos.y,1
+		.IF	Cursorpos.y>ax
+			SUB Cursorpos.y,1
+			jmp setCursor
+		.ENDIF
+		pop eax
 	.ENDIF
 	.IF ax == 4B00h ;LEFT
+		push eax
+		mov ax, xyPosition.x
 		sub Cursorpos.x,1
+		.IF	Cursorpos.x<ax
+			ADD Cursorpos.x,1
+			jmp setCursor
+		.ENDIF
+		pop eax
 	.ENDIF
 	.IF ax == 4D00h ;RIGHT
+		push eax
+		mov ax, xyPosition.x
+		ADD ax, BoxWidth-1
 		add Cursorpos.x,1
+		.IF	Cursorpos.x>ax
+			SUB Cursorpos.x,1
+			jmp setCursor
+		.ENDIF
+		pop eax
 	.ENDIF
 	.IF ax == 011Bh ;ESC
 		jmp END_FUNC
@@ -186,17 +231,52 @@ setCursor:
 		mov Temp, ax
 		mov ax, BoxWidth
 		MUL bx
-		ADD ax, Temp
-
-
+		ADD ax, Temp			;;以上是為了算出當前cursor是在array(棋盤)的哪個位置
 		
-		mov boxTop[eax], 0F8h   ;改空心點, 少了判斷勝利的函式
-								;以及少了判斷線在該誰落子的條件
-		;;;;;;;;;勝負判斷;;;;;;;;;;
-		INVOKE judge, ADDR boxTop, BoxWidth, BoxHeight, eax, 0F8h
-		.IF ebx==1
-			mov nextStep[ebx], 0F8h
+		.IF boxTop[eax]==blackDot
+			jmp setCursor
 		.ENDIF
+		.IF boxTop[eax]==WhiteDot
+			jmp setCursor
+		.ENDIF
+
+		.IF BorW==1				;;這回合是黑子
+			push eax
+			mov al, blackDot
+			mov presentType, al
+			pop eax
+		.ENDIF
+		
+		.IF BorW==0				;;這回合是白子
+			push eax
+			mov al, WhiteDot
+			mov presentType, al
+			pop eax
+		.ENDIF
+		
+		push eax				;;改變下一回合的下子顏色
+		mov ax, BorW
+		XOR ax, 1
+		mov BorW, ax
+		pop eax
+		
+		push ebx
+		mov bl, presentType
+		mov boxTop[eax], bl   ;改當前的位置變成這回合的子
+		push ebx
+		
+		
+		;;;;;;;;;勝負判斷;;;;;;;;;;
+		mov presentPos, eax
+		INVOKE judge, ADDR boxTop, BoxWidth, BoxHeight, presentPos, presentType
+		
+		.IF ebx==1				;;presentType的那個人贏了
+			push eax
+			mov al, presentType
+			mov nextStep[ebx], al
+			pop eax
+		.ENDIF
+		
 		
 		pop ecx
 		pop edx
