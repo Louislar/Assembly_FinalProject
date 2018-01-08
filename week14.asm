@@ -10,14 +10,14 @@ WhiteDot = 06Fh
  
 .data
 boxTop    BYTE 0DAh, (BoxWidth - 2) DUP(0C2h), 0BFh
-boxBody1   BYTE 0C3h, WhiteDot, WhiteDot, blackDot, (BoxWidth - 5) DUP(0C5h), 0B4h	;WhiteDot是實心點
+boxBody1   BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h	;WhiteDot是實心點
 			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h ;body有七列
 			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h
 			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h
 			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h
 			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h
 			BYTE 0C3h, (BoxWidth - 2) DUP(0C5h), 0B4h
-boxBottom BYTE 0C0h, (BoxWidth - 5) DUP(0C1h), blackDot, WhiteDot, blackDot, 0D9h ;blackDot是空心點
+boxBottom BYTE 0C0h, (BoxWidth - 2) DUP(0C1h), 0D9h ;blackDot是空心點
 
 Temp WORD 0
 ColNum WORD ?
